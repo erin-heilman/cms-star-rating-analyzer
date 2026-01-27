@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Hospital Star Rating Analyzer | Medisolv</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00539F;
+            --primary-dark: #003d75;
+            --secondary: #00B5E2;
+            --accent: #7ED321;
+            --success: #7ED321;
+            --warning: #FDB913;
+            --danger: #ED1C24;
+            --gray-50: #F8F9FA;
+            --gray-100: #F1F3F5;
+            --gray-200: #E9ECEF;
+            --gray-300: #DEE2E6;
+            --gray-400: #CED4DA;
+            --gray-500: #ADB5BD;
+            --gray-600: #6C757D;
+            --gray-700: #495057;
+            --gray-800: #343A40;
+            --gray-900: #212529;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .header-bar {
+            background: var(--primary);
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .header {
+            color: white;
+            padding: 2rem 0;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: var(--gray-50);
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary);
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--secondary);
+            background: #e6f4ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #00a0cc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-upgrade {
+            background: var(--accent);
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        .btn-upgrade:hover {
+            background: #6bc020;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2rem;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            overflow: hidden;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            font-weight: 500;
+            color: var(--gray-700);
+            flex: 1;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .tab:last-child {
+            border-right: none;
+        }
+
+        .tab:hover {
+            background: var(--gray-50);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+
+        /* Star Display */
+        .star-display {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .stars {
+            font-size: 3rem;
+            margin: 1rem 0;
+        }
+
+        .star {
+            color: #ffd700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            display: inline-block;
+        }
+
+        .star.empty {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Tables */
+        .data-table {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        .data-table .section-header {
+            background: var(--gray-100);
+            font-weight: bold;
+            color: var(--gray-700);
+        }
+
+        /* Measure Group Header */
+        .measure-group-header {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+
+        .measure-group-header td {
+            padding: 0.75rem;
+        }
+
+        /* Performance Badges */
+        .performance-badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .performance-good { 
+            background: #d4edda; 
+            color: #155724;
+        }
+        
+        .performance-average { 
+            background: #fff3cd; 
+            color: #856404;
+        }
+        
+        .performance-poor { 
+            background: #f8d7da; 
+            color: #721c24;
+        }
+
+        /* Progress Bars */
+        .measure-bar {
+            height: 24px;
+            background: var(--gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .measure-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .good { background: var(--success); }
+        .average { background: var(--warning); }
+        .poor { background: var(--danger); }
+
+        /* Peer Group Info */
+        .peer-group-info {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Score Thresholds */
+        .score-thresholds {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .threshold-box {
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .threshold-box.current {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .threshold-stars {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .threshold-range {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
+
+        .threshold-box.current .threshold-range {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Premium Features */
+        .premium-feature-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .premium-feature-card:hover {
+            border-color: var(--secondary);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Scenario Builder */
+        .scenario-builder {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .scenario-input {
+            display: grid;
+            grid-template-columns: 2fr 1fr 150px;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-input select,
+        .scenario-input input {
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .locked-scenarios {
+            background: var(--gray-100);
+            border: 2px dashed var(--gray-300);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        /* Utilities */
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+
+        .metric-label {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid var(--gray-300);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .score-thresholds {
+                grid-template-columns: 1fr;
+            }
+
+            .scenario-input {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div class="container">
+            <div class="header">
+                <h1>CMS Hospital Star Rating Analyzer</h1>
+                <p>Complete analysis of your Hospital Specific Report</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="info-box" style="margin-bottom: 1.5rem; background: #fff3cd; border-left-color: var(--warning);">
+                    <strong>Important Notes:</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                        <li>This tool is designed for the <strong>July 2025 Star Rating</strong> report only.</li>
+                        <li>CMS has not yet released the 2026 specifications for Star Ratings.</li>
+                        <li>You must upload the <strong>CSV file</strong> from your Hospital Specific Report (HSR). Excel files (.xlsx, .xls) are not supported.</li>
+                    </ul>
+                </div>
+                <div class="upload-area" id="uploadArea">
+                    <h2>Upload Your Hospital Specific Report</h2>
+                    <p style="margin: 1rem 0; color: var(--gray-600);">CSV format only (.csv)</p>
+                    <button class="btn">Select CSV File</button>
+                    <input type="file" id="fileInput" class="file-input" accept=".csv">
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your hospital data...</p>
+                </div>
+
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+
+            <div class="results-section" id="results">
+                <div class="tabs">
+                    <div class="tab active" data-tab="overview">Overview</div>
+                    <div class="tab" data-tab="summary">Summary Scores</div>
+                    <div class="tab" data-tab="measures">Individual Measures</div>
+                    <div class="tab" data-tab="insights">Analysis & Insights</div>
+                </div>
+
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overview">
+                    <div class="star-display" id="starDisplay"></div>
+                    <div class="peer-group-info" id="peerGroupInfo"></div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3 class="card-title">Quick Statistics</h3>
+                            <div id="quickStats"></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">Measure Group Performance</h3>
+                            <div id="measureGroupBars"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Scores Tab -->
+                <div class="tab-content" id="summary">
+                    <div class="data-table" id="summaryTableContainer"></div>
+                    <div class="card">
+                        <h3 class="card-title">Measure Group Performance vs National</h3>
+                        <div id="measureGroupComparison"></div>
+                    </div>
+                </div>
+
+                <!-- Individual Measures Tab -->
+                <div class="tab-content" id="measures">
+                    <div class="info-box">
+                        <strong>Complete Measure Details</strong><br>
+                        <span id="measureCountInfo"></span>
+                    </div>
+                    <div id="measuresTableContainer"></div>
+                </div>
+
+                <!-- Analysis & Insights Tab -->
+                <div class="tab-content" id="insights">
+                    <div class="card" style="background: linear-gradient(135deg, #f0f6ff, #e0edff); border: 2px solid var(--primary);">
+                        <h3 class="card-title" style="color: var(--primary);">Path to Next Star Level</h3>
+                        <div id="nextStarPath"></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3 class="card-title">Top Improvement Opportunities</h3>
+                            <div id="improvementOpportunities"></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">Your Strengths</h3>
+                            <div id="strengths"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let hospitalData = {};
+        let measureGroups = {};
+        let measures = [];
+
+        // Peer group thresholds from CMS
+        const PEER_GROUP_THRESHOLDS = {
+            '3 Measure Groups': {
+                count: 141,
+                ranges: [
+                    { min: -3.351, max: -1.638 }, // 1 star
+                    { min: -1.343, max: -0.641 }, // 2 stars
+                    { min: -0.597, max: -0.050 }, // 3 stars
+                    { min: -0.036, max: 0.423 },  // 4 stars
+                    { min: 0.476, max: 1.298 }    // 5 stars
+                ]
+            },
+            '4 Measure Groups': {
+                count: 515,
+                ranges: [
+                    { min: -1.654, max: -0.565 },
+                    { min: -0.543, max: -0.035 },
+                    { min: -0.033, max: 0.411 },
+                    { min: 0.417, max: 0.911 },
+                    { min: 0.934, max: 2.064 }
+                ]
+            },
+            '5 Measure Groups': {
+                count: 2235,
+                ranges: [
+                    { min: -2.468, max: -0.669 },
+                    { min: -0.666, max: -0.277 },
+                    { min: -0.276, max: 0.073 },
+                    { min: 0.074, max: 0.459 },
+                    { min: 0.460, max: 1.618 }
+                ]
+            }
+        };
+
+        // Measure definitions
+        const MEASURE_NAMES = {
+            'MORT_30_AMI': 'AMI 30-Day Mortality Rate',
+            'MORT_30_CABG': 'CABG 30-Day Mortality Rate',
+            'MORT_30_COPD': 'COPD 30-Day Mortality Rate',
+            'MORT_30_HF': 'Heart Failure 30-Day Mortality Rate',
+            'MORT_30_PN': 'Pneumonia 30-Day Mortality Rate',
+            'MORT_30_STK': 'Stroke 30-Day Mortality Rate',
+            'PSI_4_SURG_COMP': 'Death Rate Among Surgical Inpatients',
+            'EDAC_30_AMI': 'Excess Days in Acute Care - AMI',
+            'EDAC_30_HF': 'Excess Days in Acute Care - HF',
+            'EDAC_30_PN': 'Excess Days in Acute Care - PN',
+            'READM_30_CABG': 'CABG Readmission Rate',
+            'READM_30_COPD': 'COPD Readmission Rate',
+            'READM_30_HIP_KNEE': 'Hip/Knee Readmission Rate',
+            'READM_30_HOSP_WIDE': 'Hospital-Wide Readmission',
+            'OP_32': '7-Day Hospital Visit Rate After Colonoscopy',
+            'OP_35_ADM': 'Admissions for Chemo Patients',
+            'OP_35_ED': 'ED Visits for Chemo Patients',
+            'OP_36': 'Hospital Visits After Outpatient Surgery',
+            'COMP_HIP_KNEE': 'Hip/Knee Complication Rate',
+            'HAI_1': 'CLABSI',
+            'HAI_2': 'CAUTI',
+            'HAI_3': 'SSI - Colon Surgery',
+            'HAI_4': 'SSI - Abdominal Hysterectomy',
+            'HAI_5': 'MRSA Bacteremia',
+            'HAI_6': 'C. difficile',
+            'PSI_90_SAFETY': 'Patient Safety Composite',
+            'H_COMP_1_STAR_RATING': 'Communication with Nurses',
+            'H_COMP_2_STAR_RATING': 'Communication with Doctors',
+            'H_COMP_3_STAR_RATING': 'Responsiveness of Staff',
+            'H_COMP_5_STAR_RATING': 'Communication About Medicines',
+            'H_COMP_6_STAR_RATING': 'Discharge Information',
+            'H_COMP_7_STAR_RATING': 'Care Transition',
+            'H_INDI_STAR_RATING': 'Cleanliness & Quietness',
+            'H_GLOB_STAR_RATING': 'Overall Hospital Rating',
+            'HCP_COVID_19': 'HCP COVID-19 Vaccination',
+            'IMM_3': 'Healthcare Personnel Flu Vaccination',
+            'OP_10': 'Abdomen CT Use of Contrast',
+            'OP_13': 'Cardiac Imaging for Low-Risk Surgery',
+            'OP_18B': 'ED Median Time to Departure',
+            'OP_22': 'Left Without Being Seen',
+            'OP_23': 'Head CT Results Within 45 Min',
+            'OP_29': 'Appropriate Colonoscopy Follow-up',
+            'OP_8': 'MRI Lumbar Spine for Low Back Pain',
+            'PC_01': 'Elective Delivery',
+            'SAFE_USE_OF_OPIOIDS': 'Safe Use of Opioids',
+            'SEP_1': 'Severe Sepsis and Septic Shock'
+        };
+
+        // Helper functions
+        function safeNumber(value, defaultValue = 0) {
+            const num = parseFloat(value);
+            return isNaN(num) ? defaultValue : num;
+        }
+
+        function formatNumber(value, decimals = 3) {
+            if (value === null || value === undefined || value === '' || value === 'N/A') {
+                return 'N/A';
+            }
+            const num = safeNumber(value);
+            return num.toFixed(decimals);
+        }
+
+        function getMeasureGroup(measureId) {
+            if (measureId.startsWith('MORT') || measureId === 'PSI_4_SURG_COMP') return 'Mortality';
+            if (measureId.startsWith('EDAC') || measureId.startsWith('READM') || measureId.startsWith('OP_3')) return 'Readmission';
+            if (measureId.startsWith('COMP') || measureId.startsWith('HAI') || measureId === 'PSI_90_SAFETY') return 'Safety of Care';
+            if (measureId.startsWith('H_')) return 'Patient Experience';
+            return 'Timely & Effective Care';
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                showError('Please upload a CSV file from your Hospital Specific Report');
+                return;
+            }
+
+            loading.classList.add('active');
+            errorMessage.classList.remove('active');
+
+            const reader = new FileReader();
+            reader.onload = (e) => processCSV(e.target.result);
+            reader.readAsText(file);
+        }
+
+        function processCSV(content) {
+            try {
+                // Parse CSV
+                const lines = content.split('\n');
+                const headers = lines[0].split(',').map(h => h.trim());
+                const dataLine = lines[1] ? lines[1].split(',').map(d => d.trim()) : [];
+                
+                // Create data object
+                hospitalData = {};
+                headers.forEach((header, index) => {
+                    hospitalData[header] = dataLine[index] || '';
+                });
+
+                // Extract all data
+                extractData();
+                
+                // Display results
+                displayResults();
+                
+                loading.classList.remove('active');
+                results.classList.add('active');
+            } catch (error) {
+                console.error('Error processing CSV:', error);
+                showError('Error processing CSV file. Please ensure it\'s a valid HSR file.');
+            }
+        }
+
+        function extractData() {
+            // Extract basic info
+            const starRating = hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || '*** (3 out of 5 stars)';
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const peerGroup = hospitalData['Star_Rating_Results-HOSP_RESULT-peer_group'] || '5 Measure Groups';
+
+            // Extract measure groups
+            measureGroups = {
+                mortality: {
+                    name: 'Mortality',
+                    score: safeNumber(hospitalData['Measure_Group_Scores-Mortality-grp_score']),
+                    stdScore: safeNumber(hospitalData['Measure_Group_Scores-Mortality-hosp_std_grp_score']),
+                    weight: safeNumber(hospitalData['Measure_Group_Scores-Mortality-hosp_weight'], 0.22),
+                    measures: parseInt(hospitalData['Measure_Group_Scores-Mortality-hosp_cnt']) || 0,
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Mortality-pot_cnt']) || 7,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Mortality-nat_grp_score'])
+                },
+                readmission: {
+                    name: 'Readmission',
+                    score: safeNumber(hospitalData['Measure_Group_Scores-Readmission-grp_score']),
+                    stdScore: safeNumber(hospitalData['Measure_Group_Scores-Readmission-hosp_std_grp_score']),
+                    weight: safeNumber(hospitalData['Measure_Group_Scores-Readmission-hosp_weight'], 0.22),
+                    measures: parseInt(hospitalData['Measure_Group_Scores-Readmission-hosp_cnt']) || 0,
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Readmission-pot_cnt']) || 11,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Readmission-nat_grp_score'])
+                },
+                safety: {
+                    name: 'Safety of Care',
+                    score: safeNumber(hospitalData['Measure_Group_Scores-Safety-grp_score']),
+                    stdScore: safeNumber(hospitalData['Measure_Group_Scores-Safety-hosp_std_grp_score']),
+                    weight: safeNumber(hospitalData['Measure_Group_Scores-Safety-hosp_weight'], 0.22),
+                    measures: parseInt(hospitalData['Measure_Group_Scores-Safety-hosp_cnt']) || 0,
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Safety-pot_cnt']) || 8,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Safety-nat_grp_score'])
+                },
+                patientExperience: {
+                    name: 'Patient Experience',
+                    score: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-grp_score']),
+                    stdScore: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_std_grp_score']),
+                    weight: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_weight'], 0.22),
+                    measures: parseInt(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_cnt']) || 0,
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Patient_Experience-pot_cnt']) || 8,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-nat_grp_score'])
+                },
+                timeliness: {
+                    name: 'Timely & Effective Care',
+                    score: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-grp_score']),
+                    stdScore: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-hosp_std_grp_score']),
+                    weight: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-hosp_weight'], 0.12),
+                    measures: parseInt(hospitalData['Measure_Group_Scores-Timeliness-hosp_cnt']) || 0,
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Timeliness-pot_cnt']) || 12,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-nat_grp_score'])
+                }
+            };
+
+            // Extract individual measures
+            measures = [];
+            Object.keys(MEASURE_NAMES).forEach(id => {
+                const result = hospitalData[`Measure_Scores-hosp_meas_result-${id}`];
+                measures.push({
+                    id: id,
+                    name: MEASURE_NAMES[id],
+                    group: getMeasureGroup(id),
+                    result: result || 'N/A',
+                    nationalMean: safeNumber(hospitalData[`Measure_Scores-nat_mean_f-${id}`]),
+                    stdDev: safeNumber(hospitalData[`Measure_Scores-hosp_std_f-${id}`]),
+                    zScore: result && result !== 'N/A' ? safeNumber(hospitalData[`Measure_Scores-hosp_meas_std_f-${id}`]) : 'N/A',
+                    weight: result && result !== 'N/A' ? safeNumber(hospitalData[`Measure_Scores-hosp_meas_weight_f-${id}`]) : 'N/A'
+                });
+            });
+        }
+
+        function displayResults() {
+            displayOverview();
+            displaySummaryScores();
+            displayMeasures();
+            displayInsights();
+        }
+
+        function displayOverview() {
+            const starRating = hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || '*** (3 out of 5 stars)';
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const peerGroup = hospitalData['Star_Rating_Results-HOSP_RESULT-peer_group'] || '5 Measure Groups';
+            const starCount = parseInt(starRating.match(/\d+/)?.[0]) || 3;
+
+            // Star display
+            const starsHTML = Array(5).fill(0).map((_, i) => 
+                `<span class="star ${i < starCount ? '' : 'empty'}">★</span>`
+            ).join('');
+            
+            document.getElementById('starDisplay').innerHTML = `
+                <h2>Your Overall Star Rating</h2>
+                <div class="stars">${starsHTML}</div>
+                <div class="metric-value">Summary Score: ${formatNumber(summaryScore)}</div>
+                <p>${peerGroup}</p>
+            `;
+
+            // Peer group info
+            const peerData = PEER_GROUP_THRESHOLDS[peerGroup] || PEER_GROUP_THRESHOLDS['5 Measure Groups'];
+            let thresholdsHTML = '<div class="score-thresholds">';
+            for (let i = 0; i < 5; i++) {
+                const isCurrent = (i + 1) === starCount;
+                thresholdsHTML += `
+                    <div class="threshold-box ${isCurrent ? 'current' : ''}">
+                        <div class="threshold-stars">${'★'.repeat(i + 1)}</div>
+                        <div class="threshold-range">${formatNumber(peerData.ranges[i].min)} to ${formatNumber(peerData.ranges[i].max)}</div>
+                    </div>
+                `;
+            }
+            thresholdsHTML += '</div>';
+
+            document.getElementById('peerGroupInfo').innerHTML = `
+                <h3 class="card-title">Peer Group Analysis</h3>
+                <p>You are part of the <strong>${peerGroup}</strong> peer group, which includes <strong>${peerData.count.toLocaleString()}</strong> hospitals nationwide.</p>
+                <p>Your summary score of <strong>${formatNumber(summaryScore)}</strong> places you in the <strong>${starCount}-star</strong> category.</p>
+                ${thresholdsHTML}
+            `;
+
+            // Quick stats
+            const totalMeasures = measures.filter(m => m.result !== 'N/A').length;
+            document.getElementById('quickStats').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <div class="metric-label">Provider ID</div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">${hospitalData['Provider_ID'] || 'Unknown'}</div>
+                </div>
+                <div>
+                    <div class="metric-label">Measures Reported</div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">${totalMeasures} of 46</div>
+                </div>
+            `;
+
+            // Measure group bars
+            let barsHTML = '';
+            Object.values(measureGroups).forEach(group => {
+                const score = group.stdScore;
+                const barWidth = Math.min(Math.abs(score) * 25 + 50, 100);
+                const barClass = score > 0.5 ? 'good' : score < -0.5 ? 'poor' : 'average';
+                
+                barsHTML += `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                            <strong>${group.name}</strong>
+                            <span>${formatNumber(score)}</span>
+                        </div>
+                        <div class="measure-bar">
+                            <div class="measure-fill ${barClass}" style="width: ${barWidth}%">
+                                ${group.measures}/${group.potential}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('measureGroupBars').innerHTML = barsHTML;
+        }
+
+        function displaySummaryScores() {
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const nationalAvg = safeNumber(hospitalData['Star_Rating_Results-NTL_AVG-summary_score']);
+            
+            let tableHTML = `
+                <table>
+                    <tr class="section-header">
+                        <td colspan="6">Overall Star Rating Results</td>
+                    </tr>
+                    <tr>
+                        <td>Overall Star Rating</td>
+                        <td colspan="5">${hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td>Hospital Summary Score</td>
+                        <td colspan="2">${formatNumber(summaryScore)}</td>
+                        <td>National Average</td>
+                        <td colspan="2">${formatNumber(nationalAvg)}</td>
+                    </tr>
+                    <tr class="section-header">
+                        <td colspan="6">Measure Group Scores</td>
+                    </tr>
+                    <tr>
+                        <th>Measure Group</th>
+                        <th>Measures Used</th>
+                        <th>Your Score</th>
+                        <th>National Score</th>
+                        <th>Weight</th>
+                        <th>Weighted Score</th>
+                    </tr>
+            `;
+            
+            let totalWeighted = 0;
+            Object.values(measureGroups).forEach(group => {
+                const weighted = group.stdScore * group.weight;
+                totalWeighted += weighted;
+                tableHTML += `
+                    <tr>
+                        <td>${group.name}</td>
+                        <td>${group.measures} of ${group.potential}</td>
+                        <td>${formatNumber(group.stdScore)}</td>
+                        <td>${formatNumber(group.nationalScore)}</td>
+                        <td>${(group.weight * 100).toFixed(0)}%</td>
+                        <td>${formatNumber(weighted)}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    <tr style="font-weight: bold; background: var(--gray-100);">
+                        <td colspan="5">Total Summary Score</td>
+                        <td>${formatNumber(totalWeighted)}</td>
+                    </tr>
+                </table>
+            `;
+            
+            document.getElementById('summaryTableContainer').innerHTML = tableHTML;
+
+            // Comparison chart
+            let comparisonHTML = '';
+            Object.values(measureGroups).forEach(group => {
+                const percentile = Math.round((1 + Math.tanh(group.stdScore / 1.5)) * 50);
+                comparisonHTML += `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                            <strong>${group.name}</strong>
+                            <span>${percentile}th percentile</span>
+                        </div>
+                        <div class="measure-bar">
+                            <div class="measure-fill ${group.stdScore > 0 ? 'good' : 'poor'}" style="width: ${percentile}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('measureGroupComparison').innerHTML = comparisonHTML;
+        }
+
+        function displayMeasures() {
+            const totalMeasures = measures.filter(m => m.result !== 'N/A').length;
+            document.getElementById('measureCountInfo').textContent = 
+                `Your hospital reported ${totalMeasures} measures out of 46 possible measures.`;
+
+            let tablesHTML = '';
+            const groups = ['Mortality', 'Readmission', 'Safety of Care', 'Patient Experience', 'Timely & Effective Care'];
+            
+            groups.forEach(groupName => {
+                const groupMeasures = measures.filter(m => m.group === groupName);
+                
+                tablesHTML += `
+                    <div class="data-table" style="margin-bottom: 2rem;">
+                        <table>
+                            <thead>
+                                <tr class="measure-group-header">
+                                    <td colspan="8">${groupName}</td>
+                                </tr>
+                                <tr>
+                                    <th>Measure Name</th>
+                                    <th>ID</th>
+                                    <th>Your Result</th>
+                                    <th>National Mean</th>
+                                    <th>Std Dev</th>
+                                    <th>Z-Score</th>
+                                    <th>Weight</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                groupMeasures.forEach(measure => {
+                    let performanceHTML = 'N/A';
+                    if (measure.zScore !== 'N/A') {
+                        const zScore = safeNumber(measure.zScore);
+                        const performanceClass = zScore > 0.5 ? 'performance-good' : 
+                                               zScore < -0.5 ? 'performance-poor' : 
+                                               'performance-average';
+                        const performanceText = zScore > 0.5 ? 'Above' : 
+                                              zScore < -0.5 ? 'Below' : 
+                                              'Average';
+                        performanceHTML = `<span class="performance-badge ${performanceClass}">${performanceText}</span>`;
+                    }
+                    
+                    tablesHTML += `
+                        <tr>
+                            <td>${measure.name}</td>
+                            <td>${measure.id}</td>
+                            <td>${formatNumber(measure.result)}</td>
+                            <td>${formatNumber(measure.nationalMean)}</td>
+                            <td>${formatNumber(measure.stdDev)}</td>
+                            <td>${formatNumber(measure.zScore)}</td>
+                            <td>${measure.weight !== 'N/A' ? (safeNumber(measure.weight) * 100).toFixed(1) + '%' : 'N/A'}</td>
+                            <td>${performanceHTML}</td>
+                        </tr>
+                    `;
+                });
+                
+                tablesHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('measuresTableContainer').innerHTML = tablesHTML;
+        }
+
+        function displayInsights() {
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const starRating = hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || '*** (3 out of 5 stars)';
+            const starCount = parseInt(starRating.match(/\d+/)?.[0]) || 3;
+            const peerGroup = hospitalData['Star_Rating_Results-HOSP_RESULT-peer_group'] || '5 Measure Groups';
+            
+            // Path to next star
+            const peerData = PEER_GROUP_THRESHOLDS[peerGroup] || PEER_GROUP_THRESHOLDS['5 Measure Groups'];
+            let nextStarHTML = '';
+            
+            if (starCount < 5) {
+                const nextThreshold = peerData.ranges[starCount].min;
+                const distance = nextThreshold - summaryScore;
+                
+                nextStarHTML = `
+                    <div style="text-align: center;">
+                        <div class="metric-value" style="color: var(--primary);">
+                            ${formatNumber(Math.abs(distance))}
+                        </div>
+                        <div class="metric-label">Points needed for ${starCount + 1} Stars</div>
+                        <p style="margin-top: 1rem;">
+                            Your current score: <strong>${formatNumber(summaryScore)}</strong><br>
+                            Target threshold: <strong>${formatNumber(nextThreshold)}</strong><br>
+                            <small style="color: var(--gray-600);">Focus on improving your worst-performing measures</small>
+                        </p>
+                    </div>
+                `;
+            } else {
+                nextStarHTML = `
+                    <div style="text-align: center;">
+                        <div class="metric-value" style="color: var(--success);">⭐⭐⭐⭐⭐</div>
+                        <div class="metric-label">Maximum Rating Achieved</div>
+                        <p style="margin-top: 1rem;">
+                            Congratulations! Focus on maintaining this excellent performance.
+                        </p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('nextStarPath').innerHTML = nextStarHTML;
+
+            // Improvement opportunities and strengths
+            const validMeasures = measures.filter(m => m.result !== 'N/A' && m.zScore !== 'N/A');
+            const sortedMeasures = [...validMeasures].sort((a, b) => safeNumber(a.zScore) - safeNumber(b.zScore));
+            
+            const worstMeasures = sortedMeasures.slice(0, 5);
+            const bestMeasures = sortedMeasures.slice(-5).reverse();
+            
+            let opportunitiesHTML = '<ul style="list-style: none; padding: 0;">';
+            worstMeasures.forEach(measure => {
+                opportunitiesHTML += `
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--gray-200);">
+                        <strong>${measure.name}</strong><br>
+                        <small>Z-Score: ${formatNumber(measure.zScore)} | Group: ${measure.group}</small>
+                    </li>
+                `;
+            });
+            opportunitiesHTML += '</ul>';
+            document.getElementById('improvementOpportunities').innerHTML = opportunitiesHTML;
+            
+            let strengthsHTML = '<ul style="list-style: none; padding: 0;">';
+            bestMeasures.forEach(measure => {
+                strengthsHTML += `
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--gray-200);">
+                        <strong>${measure.name}</strong><br>
+                        <small>Z-Score: ${formatNumber(measure.zScore)} | Group: ${measure.group}</small>
+                    </li>
+                `;
+            });
+            strengthsHTML += '</ul>';
+            document.getElementById('strengths').innerHTML = strengthsHTML;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            loading.classList.remove('active');
+        }
+
+    </script>
+</body>
+</html>

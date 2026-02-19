@@ -279,6 +279,10 @@
             background: var(--gray-50);
         }
 
+        .data-table tr.measure-group-header:hover {
+            background: var(--primary);
+        }
+
         .data-table .section-header {
             background: var(--gray-100);
             font-weight: bold;
@@ -539,7 +543,7 @@
         <div class="container">
             <div class="header">
                 <h1>CMS Hospital Star Rating Analyzer</h1>
-                <p>Complete analysis of your Hospital Specific Report</p>
+                <p>Complete analysis of your Hospital Specific Report — April 2026 (Methodology v5.0)</p>
             </div>
         </div>
     </div>
@@ -550,8 +554,8 @@
                 <div class="info-box" style="margin-bottom: 1.5rem; background: #fff3cd; border-left-color: var(--warning);">
                     <strong>Important Notes:</strong>
                     <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
-                        <li>This tool is designed for the <strong>July 2025 Star Rating</strong> report only.</li>
-                        <li>CMS has not yet released the 2026 specifications for Star Ratings.</li>
+                        <li>This tool is designed for the <strong>April 2026 Star Rating</strong> report (Methodology v5.0).</li>
+                        <li>Updated to reflect the CY 2026 OPPS/ASC Final Rule (CMS-1834-FC) changes including new Step 9 Safety of Care cap, 6 new measures, and HCAHPS linear scoring.</li>
                         <li>You must upload the <strong>CSV file</strong> from your Hospital Specific Report (HSR). Excel files (.xlsx, .xls) are not supported.</li>
                     </ul>
                 </div>
@@ -598,7 +602,7 @@
                 <div class="tab-content" id="summary">
                     <div class="data-table" id="summaryTableContainer"></div>
                     <div class="card">
-                        <h3 class="card-title">Measure Group Performance vs National</h3>
+                        <h3 class="card-title">National Quartile Ranking by Measure Group</h3>
                         <div id="measureGroupComparison"></div>
                     </div>
                 </div>
@@ -640,60 +644,129 @@
         let measureGroups = {};
         let measures = [];
 
-        // Peer group thresholds from CMS
+        // National percentile benchmarks by measure group - April 2026 (Methodology v5.0, Table 7)
+        // These represent the distribution of measure group scores among all hospitals with at least one measure in a given group
+        const GROUP_PERCENTILE_BENCHMARKS = {
+            'Mortality': {
+                n: 4133,
+                nationalAvg: -0.079,
+                stdDev: 0.7382,
+                min: -6.404,
+                p25: -0.498,
+                median: -0.030,
+                p75: 0.392,
+                max: 3.014
+            },
+            'Safety of Care': {
+                n: 3372,
+                nationalAvg: -0.024,
+                stdDev: 0.8335,
+                min: -13.566,
+                p25: -0.277,
+                median: 0.087,
+                p75: 0.412,
+                max: 2.354
+            },
+            'Readmission': {
+                n: 4308,
+                nationalAvg: 0.000,
+                stdDev: 0.5635,
+                min: -4.341,
+                p25: -0.293,
+                median: 0.037,
+                p75: 0.346,
+                max: 2.784
+            },
+            'Patient Experience': {
+                n: 3496,
+                nationalAvg: 0.027,
+                stdDev: 0.8383,
+                min: -10.563,
+                p25: -0.430,
+                median: 0.072,
+                p75: 0.557,
+                max: 2.967
+            },
+            'Timely & Effective Care': {
+                n: 4549,
+                nationalAvg: 0.017,
+                stdDev: 0.5126,
+                min: -5.263,
+                p25: -0.231,
+                median: 0.048,
+                p75: 0.323,
+                max: 2.678
+            }
+        };
+
+        // Returns the quartile label and color class for a hospital's group score
+        function getQuartileInfo(groupName, score) {
+            const bench = GROUP_PERCENTILE_BENCHMARKS[groupName];
+            if (!bench) return { label: 'N/A', class: '', description: '' };
+            if (score > bench.p75) return { label: 'Top 25%', class: 'performance-good', description: 'Above 75th percentile' };
+            if (score > bench.median) return { label: 'Above Average', class: 'performance-good', description: '50th–75th percentile' };
+            if (score > bench.p25) return { label: 'Below Average', class: 'performance-average', description: '25th–50th percentile' };
+            return { label: 'Bottom 25%', class: 'performance-poor', description: 'Below 25th percentile' };
+        }
+
+        // Peer group thresholds from CMS - April 2026 (Methodology v5.0, Table 8)
         const PEER_GROUP_THRESHOLDS = {
             '3 Measure Groups': {
-                count: 141,
+                count: 177,
                 ranges: [
-                    { min: -3.351, max: -1.638 }, // 1 star
-                    { min: -1.343, max: -0.641 }, // 2 stars
-                    { min: -0.597, max: -0.050 }, // 3 stars
-                    { min: -0.036, max: 0.423 },  // 4 stars
-                    { min: 0.476, max: 1.298 }    // 5 stars
+                    { min: -2.808, max: -1.276 }, // 1 star
+                    { min: -1.201, max: -0.466 }, // 2 stars
+                    { min: -0.439, max: 0.085 },  // 3 stars
+                    { min: 0.104, max: 0.645 },   // 4 stars
+                    { min: 0.678, max: 1.339 }    // 5 stars
                 ]
             },
             '4 Measure Groups': {
-                count: 515,
+                count: 749,
                 ranges: [
-                    { min: -1.654, max: -0.565 },
-                    { min: -0.543, max: -0.035 },
-                    { min: -0.033, max: 0.411 },
-                    { min: 0.417, max: 0.911 },
-                    { min: 0.934, max: 2.064 }
+                    { min: -2.954, max: -0.745 },
+                    { min: -0.730, max: -0.164 },
+                    { min: -0.160, max: 0.244 },
+                    { min: 0.247, max: 0.687 },
+                    { min: 0.703, max: 2.016 }
                 ]
             },
             '5 Measure Groups': {
-                count: 2235,
+                count: 2277,
                 ranges: [
-                    { min: -2.468, max: -0.669 },
-                    { min: -0.666, max: -0.277 },
-                    { min: -0.276, max: 0.073 },
-                    { min: 0.074, max: 0.459 },
-                    { min: 0.460, max: 1.618 }
+                    { min: -2.648, max: -0.694 },
+                    { min: -0.691, max: -0.277 },
+                    { min: -0.276, max: 0.063 },
+                    { min: 0.063, max: 1.224 },
+                    { min: 0.425, max: 1.656 }
                 ]
             }
         };
 
-        // Measure definitions
+        // Measure definitions - Updated for April 2026 (Methodology v5.0)
         const MEASURE_NAMES = {
+            // Mortality (8 measures)
             'MORT_30_AMI': 'AMI 30-Day Mortality Rate',
             'MORT_30_CABG': 'CABG 30-Day Mortality Rate',
             'MORT_30_COPD': 'COPD 30-Day Mortality Rate',
             'MORT_30_HF': 'Heart Failure 30-Day Mortality Rate',
             'MORT_30_PN': 'Pneumonia 30-Day Mortality Rate',
             'MORT_30_STK': 'Stroke 30-Day Mortality Rate',
+            'HYBRID_HWM': 'Hybrid Hospital-Wide Mortality',
             'PSI_4_SURG_COMP': 'Death Rate Among Surgical Inpatients',
+            // Readmission (11 measures)
             'EDAC_30_AMI': 'Excess Days in Acute Care - AMI',
             'EDAC_30_HF': 'Excess Days in Acute Care - HF',
             'EDAC_30_PN': 'Excess Days in Acute Care - PN',
             'READM_30_CABG': 'CABG Readmission Rate',
             'READM_30_COPD': 'COPD Readmission Rate',
             'READM_30_HIP_KNEE': 'Hip/Knee Readmission Rate',
-            'READM_30_HOSP_WIDE': 'Hospital-Wide Readmission',
+            'HYBRID_HWR': 'Hybrid Hospital-Wide Readmission',
             'OP_32': '7-Day Hospital Visit Rate After Colonoscopy',
             'OP_35_ADM': 'Admissions for Chemo Patients',
             'OP_35_ED': 'ED Visits for Chemo Patients',
             'OP_36': 'Hospital Visits After Outpatient Surgery',
+            // Safety of Care (8 measures)
             'COMP_HIP_KNEE': 'Hip/Knee Complication Rate',
             'HAI_1': 'CLABSI',
             'HAI_2': 'CAUTI',
@@ -702,15 +775,24 @@
             'HAI_5': 'MRSA Bacteremia',
             'HAI_6': 'C. difficile',
             'PSI_90_SAFETY': 'Patient Safety Composite',
-            'H_COMP_1_STAR_RATING': 'Communication with Nurses',
-            'H_COMP_2_STAR_RATING': 'Communication with Doctors',
-            'H_COMP_3_STAR_RATING': 'Responsiveness of Staff',
-            'H_COMP_5_STAR_RATING': 'Communication About Medicines',
-            'H_COMP_6_STAR_RATING': 'Discharge Information',
-            'H_COMP_7_STAR_RATING': 'Care Transition',
-            'H_INDI_STAR_RATING': 'Cleanliness & Quietness',
-            'H_GLOB_STAR_RATING': 'Overall Hospital Rating',
-            'HCP_COVID_19': 'HCP COVID-19 Vaccination',
+            // Patient Experience - HCAHPS (10 measures, now using linear scores)
+            'H_COMP_1_LINEAR_SCORE': 'Communication with Nurses',
+            'H_COMP_2_LINEAR_SCORE': 'Communication with Doctors',
+            'H_COMP_3_LINEAR_SCORE': 'Responsiveness of Staff',
+            'H_COMP_5_LINEAR_SCORE': 'Communication About Medicines',
+            'H_COMP_6_LINEAR_SCORE': 'Discharge Information',
+            'H_COMP_7_LINEAR_SCORE': 'Care Transition',
+            'H_CLEAN_LINEAR_SCORE': 'Cleanliness of Hospital Environment',
+            'H_QUIET_LINEAR_SCORE': 'Quietness of Hospital Environment',
+            'H_HSP_RATING_LINEAR_SCORE': 'Overall Hospital Rating',
+            'H_RECMND_LINEAR_SCORE': 'Willingness to Recommend Hospital',
+            // Patient Experience - OAS CAHPS (5 new measures)
+            'O_COMP_1': 'OAS CAHPS: Facilities and Staff',
+            'O_COMP_2': 'OAS CAHPS: Communications About Your Procedure',
+            'O_COMP_3': 'OAS CAHPS: Preparing for Discharge and Recovery',
+            'O_PATIENT_RATE': 'OAS CAHPS: Patients\' Rating of the Facility',
+            'O_PATIENT_REC': 'OAS CAHPS: Patients\' Recommending the Facility',
+            // Timely & Effective Care (10 measures - PC-01 and HCP-COVID-19 removed)
             'IMM_3': 'Healthcare Personnel Flu Vaccination',
             'OP_10': 'Abdomen CT Use of Contrast',
             'OP_13': 'Cardiac Imaging for Low-Risk Surgery',
@@ -719,7 +801,6 @@
             'OP_23': 'Head CT Results Within 45 Min',
             'OP_29': 'Appropriate Colonoscopy Follow-up',
             'OP_8': 'MRI Lumbar Spine for Low Back Pain',
-            'PC_01': 'Elective Delivery',
             'SAFE_USE_OF_OPIOIDS': 'Safe Use of Opioids',
             'SEP_1': 'Severe Sepsis and Septic Shock'
         };
@@ -739,10 +820,10 @@
         }
 
         function getMeasureGroup(measureId) {
-            if (measureId.startsWith('MORT') || measureId === 'PSI_4_SURG_COMP') return 'Mortality';
-            if (measureId.startsWith('EDAC') || measureId.startsWith('READM') || measureId.startsWith('OP_3')) return 'Readmission';
+            if (measureId.startsWith('MORT') || measureId === 'PSI_4_SURG_COMP' || measureId === 'HYBRID_HWM') return 'Mortality';
+            if (measureId.startsWith('EDAC') || measureId.startsWith('READM') || measureId === 'HYBRID_HWR' || measureId.startsWith('OP_3')) return 'Readmission';
             if (measureId.startsWith('COMP') || measureId.startsWith('HAI') || measureId === 'PSI_90_SAFETY') return 'Safety of Care';
-            if (measureId.startsWith('H_')) return 'Patient Experience';
+            if (measureId.startsWith('H_') || measureId.startsWith('O_')) return 'Patient Experience';
             return 'Timely & Effective Care';
         }
 
@@ -845,8 +926,10 @@
                     stdScore: safeNumber(hospitalData['Measure_Group_Scores-Mortality-hosp_std_grp_score']),
                     weight: safeNumber(hospitalData['Measure_Group_Scores-Mortality-hosp_weight'], 0.22),
                     measures: parseInt(hospitalData['Measure_Group_Scores-Mortality-hosp_cnt']) || 0,
-                    potential: parseInt(hospitalData['Measure_Group_Scores-Mortality-pot_cnt']) || 7,
-                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Mortality-nat_grp_score'])
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Mortality-pot_cnt']) || 8,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Mortality-nat_grp_score']),
+                    nationalMean: safeNumber(hospitalData['Measure_Group_Scores-Mortality-grp_natmean']),
+                    stdDev: safeNumber(hospitalData['Measure_Group_Scores-Mortality-grp_stdev'])
                 },
                 readmission: {
                     name: 'Readmission',
@@ -855,7 +938,9 @@
                     weight: safeNumber(hospitalData['Measure_Group_Scores-Readmission-hosp_weight'], 0.22),
                     measures: parseInt(hospitalData['Measure_Group_Scores-Readmission-hosp_cnt']) || 0,
                     potential: parseInt(hospitalData['Measure_Group_Scores-Readmission-pot_cnt']) || 11,
-                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Readmission-nat_grp_score'])
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Readmission-nat_grp_score']),
+                    nationalMean: safeNumber(hospitalData['Measure_Group_Scores-Readmission-grp_natmean']),
+                    stdDev: safeNumber(hospitalData['Measure_Group_Scores-Readmission-grp_stdev'])
                 },
                 safety: {
                     name: 'Safety of Care',
@@ -864,7 +949,9 @@
                     weight: safeNumber(hospitalData['Measure_Group_Scores-Safety-hosp_weight'], 0.22),
                     measures: parseInt(hospitalData['Measure_Group_Scores-Safety-hosp_cnt']) || 0,
                     potential: parseInt(hospitalData['Measure_Group_Scores-Safety-pot_cnt']) || 8,
-                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Safety-nat_grp_score'])
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Safety-nat_grp_score']),
+                    nationalMean: safeNumber(hospitalData['Measure_Group_Scores-Safety-grp_natmean']),
+                    stdDev: safeNumber(hospitalData['Measure_Group_Scores-Safety-grp_stdev'])
                 },
                 patientExperience: {
                     name: 'Patient Experience',
@@ -872,8 +959,10 @@
                     stdScore: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_std_grp_score']),
                     weight: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_weight'], 0.22),
                     measures: parseInt(hospitalData['Measure_Group_Scores-Patient_Experience-hosp_cnt']) || 0,
-                    potential: parseInt(hospitalData['Measure_Group_Scores-Patient_Experience-pot_cnt']) || 8,
-                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-nat_grp_score'])
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Patient_Experience-pot_cnt']) || 15,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-nat_grp_score']),
+                    nationalMean: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-grp_natmean']),
+                    stdDev: safeNumber(hospitalData['Measure_Group_Scores-Patient_Experience-grp_stdev'])
                 },
                 timeliness: {
                     name: 'Timely & Effective Care',
@@ -881,24 +970,32 @@
                     stdScore: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-hosp_std_grp_score']),
                     weight: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-hosp_weight'], 0.12),
                     measures: parseInt(hospitalData['Measure_Group_Scores-Timeliness-hosp_cnt']) || 0,
-                    potential: parseInt(hospitalData['Measure_Group_Scores-Timeliness-pot_cnt']) || 12,
-                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-nat_grp_score'])
+                    potential: parseInt(hospitalData['Measure_Group_Scores-Timeliness-pot_cnt']) || 10,
+                    nationalScore: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-nat_grp_score']),
+                    nationalMean: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-grp_natmean']),
+                    stdDev: safeNumber(hospitalData['Measure_Group_Scores-Timeliness-grp_stdev'])
                 }
             };
 
             // Extract individual measures
+            // Note: April 2026 CSV uses column names without _f suffix (e.g., nat_mean instead of nat_mean_f)
             measures = [];
             Object.keys(MEASURE_NAMES).forEach(id => {
                 const result = hospitalData[`Measure_Scores-hosp_meas_result-${id}`];
+                // Support both old (_f suffix) and new (no suffix) column naming conventions
+                const nationalMean = hospitalData[`Measure_Scores-nat_mean-${id}`] ?? hospitalData[`Measure_Scores-nat_mean_f-${id}`];
+                const stdDev = hospitalData[`Measure_Scores-hosp_std-${id}`] ?? hospitalData[`Measure_Scores-hosp_std_f-${id}`];
+                const zScoreRaw = hospitalData[`Measure_Scores-hosp_meas_std-${id}`] ?? hospitalData[`Measure_Scores-hosp_meas_std_f-${id}`];
+                const weightRaw = hospitalData[`Measure_Scores-hosp_meas_weight-${id}`] ?? hospitalData[`Measure_Scores-hosp_meas_weight_f-${id}`];
                 measures.push({
                     id: id,
                     name: MEASURE_NAMES[id],
                     group: getMeasureGroup(id),
                     result: result || 'N/A',
-                    nationalMean: safeNumber(hospitalData[`Measure_Scores-nat_mean_f-${id}`]),
-                    stdDev: safeNumber(hospitalData[`Measure_Scores-hosp_std_f-${id}`]),
-                    zScore: result && result !== 'N/A' ? safeNumber(hospitalData[`Measure_Scores-hosp_meas_std_f-${id}`]) : 'N/A',
-                    weight: result && result !== 'N/A' ? safeNumber(hospitalData[`Measure_Scores-hosp_meas_weight_f-${id}`]) : 'N/A'
+                    nationalMean: safeNumber(nationalMean),
+                    stdDev: safeNumber(stdDev),
+                    zScore: result && result !== 'N/A' ? safeNumber(zScoreRaw) : 'N/A',
+                    weight: result && result !== 'N/A' ? safeNumber(weightRaw) : 'N/A'
                 });
             });
         }
@@ -958,7 +1055,7 @@
                 </div>
                 <div>
                     <div class="metric-label">Measures Reported</div>
-                    <div style="font-size: 1.5rem; font-weight: 600;">${totalMeasures} of 46</div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">${totalMeasures} of 52</div>
                 </div>
             `;
 
@@ -1044,18 +1141,75 @@
             
             document.getElementById('summaryTableContainer').innerHTML = tableHTML;
 
-            // Comparison chart
-            let comparisonHTML = '';
+            // National Quartile Ranking section using Table 7 benchmarks
+            let comparisonHTML = `
+                <div class="info-box" style="margin-bottom: 1.5rem;">
+                    <strong>How to Read This Section</strong><br>
+                    <p style="margin-top: 0.5rem;">CMS publishes national benchmarks for each measure group based on all hospitals in the country (Methodology v5.0, Table 7).
+                    Your hospital's <strong>measure group score</strong> (the simple average of standardized measure scores within each category) is compared against these national benchmarks to determine which quartile you fall into:</p>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                        <li><strong>Top 25%</strong> — Your score is above the 75th percentile nationally. You outperform at least 75% of hospitals.</li>
+                        <li><strong>Above Average</strong> — Your score falls between the 50th and 75th percentile. You outperform the majority of hospitals.</li>
+                        <li><strong>Below Average</strong> — Your score falls between the 25th and 50th percentile. More than half of hospitals score higher.</li>
+                        <li><strong>Bottom 25%</strong> — Your score is below the 25th percentile nationally. This is a key area for improvement.</li>
+                    </ul>
+                </div>
+            `;
+
             Object.values(measureGroups).forEach(group => {
-                const percentile = Math.round((1 + Math.tanh(group.stdScore / 1.5)) * 50);
+                const bench = GROUP_PERCENTILE_BENCHMARKS[group.name];
+                if (!bench || group.measures === 0) return;
+
+                const quartile = getQuartileInfo(group.name, group.score);
+
+                // Place the hospital marker within the 4 equal quartile zones (each 25% wide)
+                // Zone 1: 0-25% (Bottom 25%), Zone 2: 25-50% (Below Average), Zone 3: 50-75% (Above Average), Zone 4: 75-100% (Top 25%)
+                let markerPercent;
+                const score = group.score;
+                if (score <= bench.p25) {
+                    // Bottom 25%: map score within [min, p25] to [2%, 24%]
+                    const zoneMin = bench.min;
+                    const zoneMax = bench.p25;
+                    const pct = zoneMax === zoneMin ? 0.5 : (score - zoneMin) / (zoneMax - zoneMin);
+                    markerPercent = 2 + pct * 22;
+                } else if (score <= bench.median) {
+                    // Below Average: map score within (p25, median] to [26%, 49%]
+                    const pct = bench.median === bench.p25 ? 0.5 : (score - bench.p25) / (bench.median - bench.p25);
+                    markerPercent = 26 + pct * 23;
+                } else if (score <= bench.p75) {
+                    // Above Average: map score within (median, p75] to [51%, 74%]
+                    const pct = bench.p75 === bench.median ? 0.5 : (score - bench.median) / (bench.p75 - bench.median);
+                    markerPercent = 51 + pct * 23;
+                } else {
+                    // Top 25%: map score within (p75, max] to [76%, 98%]
+                    const zoneMin = bench.p75;
+                    const zoneMax = bench.max;
+                    const pct = zoneMax === zoneMin ? 0.5 : (score - zoneMin) / (zoneMax - zoneMin);
+                    markerPercent = 76 + pct * 22;
+                }
+                markerPercent = Math.max(2, Math.min(98, markerPercent));
+
                 comparisonHTML += `
-                    <div style="margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-50); border-radius: 8px; border: 1px solid var(--gray-200);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <strong>${group.name}</strong>
-                            <span>${percentile}th percentile</span>
+                            <span class="performance-badge ${quartile.class}">${quartile.label}</span>
                         </div>
-                        <div class="measure-bar">
-                            <div class="measure-fill ${group.stdScore > 0 ? 'good' : 'poor'}" style="width: ${percentile}%"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gray-600); margin-bottom: 0.25rem;">
+                            <span>Your Score: ${formatNumber(group.score)}</span>
+                            <span>${quartile.description}</span>
+                        </div>
+                        <div style="position: relative; height: 28px; background: linear-gradient(to right, #f8d7da 0%, #f8d7da 25%, #fff3cd 25%, #fff3cd 50%, #c8e6c9 50%, #c8e6c9 75%, #a5d6a7 75%, #a5d6a7 100%); border-radius: 12px; margin-top: 0.5rem; overflow: visible;">
+                            <div style="position: absolute; left: 25%; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,0.15);"></div>
+                            <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,0.2);"></div>
+                            <div style="position: absolute; left: 75%; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,0.15);"></div>
+                            <div style="position: absolute; left: calc(${markerPercent}% - 7px); top: -3px; width: 14px; height: 34px; background: var(--primary); border-radius: 4px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 1;"></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; font-size: 0.7rem; color: var(--gray-600); margin-top: 0.35rem; text-align: center;">
+                            <span>Bottom 25%<br><span style="color: var(--gray-400);">below ${formatNumber(bench.p25)}</span></span>
+                            <span>Below Avg<br><span style="color: var(--gray-400);">${formatNumber(bench.p25)} – ${formatNumber(bench.median)}</span></span>
+                            <span>Above Avg<br><span style="color: var(--gray-400);">${formatNumber(bench.median)} – ${formatNumber(bench.p75)}</span></span>
+                            <span>Top 25%<br><span style="color: var(--gray-400);">above ${formatNumber(bench.p75)}</span></span>
                         </div>
                     </div>
                 `;
@@ -1066,7 +1220,7 @@
         function displayMeasures() {
             const totalMeasures = measures.filter(m => m.result !== 'N/A').length;
             document.getElementById('measureCountInfo').textContent = 
-                `Your hospital reported ${totalMeasures} measures out of 46 possible measures.`;
+                `Your hospital reported ${totalMeasures} measures out of 52 possible measures.`;
 
             let tablesHTML = '';
             const groups = ['Mortality', 'Readmission', 'Safety of Care', 'Patient Experience', 'Timely & Effective Care'];

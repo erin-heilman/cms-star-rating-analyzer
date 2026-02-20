@@ -536,7 +536,38 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Export Buttons */
+        .export-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-export {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 0.625rem 1.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .btn-export:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
     </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="header-bar">
@@ -580,6 +611,15 @@
                     <div class="tab" data-tab="summary">Summary Scores</div>
                     <div class="tab" data-tab="measures">Individual Measures</div>
                     <div class="tab" data-tab="insights">Analysis & Insights</div>
+                </div>
+
+                <div class="export-bar">
+                    <button class="btn-export" onclick="exportToExcel()" title="Download multi-sheet Excel workbook">
+                        Export Excel Workbook
+                    </button>
+                    <button class="btn-export" onclick="exportToPDF()" title="Download formatted PDF executive summary">
+                        Export PDF Summary
+                    </button>
                 </div>
 
                 <!-- Overview Tab -->
@@ -1363,6 +1403,387 @@
             errorMessage.textContent = message;
             errorMessage.classList.add('active');
             loading.classList.remove('active');
+        }
+
+        // ==================== EXPORT FUNCTIONS ====================
+
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('Excel export library failed to load. Please check your internet connection and refresh.');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const providerId = hospitalData['Provider_ID'] || 'Unknown';
+            const starRating = hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || 'N/A';
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const peerGroup = hospitalData['Star_Rating_Results-HOSP_RESULT-peer_group'] || '5 Measure Groups';
+            const reportDate = new Date().toLocaleDateString();
+
+            // --- SHEET 1: Executive Summary ---
+            const summaryData = [
+                ['CMS Hospital Star Rating - Executive Summary'],
+                [],
+                ['Field', 'Value'],
+                ['Provider ID', providerId],
+                ['Overall Star Rating', starRating],
+                ['Summary Score', formatNumber(summaryScore)],
+                ['Peer Group', peerGroup],
+                ['Report Generated', reportDate],
+                ['Methodology', 'April 2026 (v5.0)']
+            ];
+            const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+            ws1['!cols'] = [{ wch: 25 }, { wch: 45 }];
+            ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+            XLSX.utils.book_append_sheet(wb, ws1, 'Executive Summary');
+
+            // --- SHEET 2: Measure Group Scores ---
+            const groupHeaders = [
+                'Group Name', 'Measures Used', 'Potential', 'Group Score', 'Standardized Score',
+                'National Mean', 'Std Dev', 'Weight', 'Weighted Score', 'Quartile Ranking'
+            ];
+            const groupRows = Object.values(measureGroups).map(group => {
+                const quartile = getQuartileInfo(group.name, group.score);
+                return [
+                    group.name,
+                    group.measures,
+                    group.potential,
+                    safeNumber(group.score),
+                    safeNumber(group.stdScore),
+                    safeNumber(group.nationalMean),
+                    safeNumber(group.stdDev),
+                    group.weight,
+                    safeNumber(group.stdScore) * group.weight,
+                    quartile.label
+                ];
+            });
+            const ws2 = XLSX.utils.aoa_to_sheet([groupHeaders, ...groupRows]);
+            ws2['!cols'] = [
+                { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 18 },
+                { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws2, 'Measure Group Scores');
+
+            // --- SHEET 3: All Measures ---
+            const measureHeaders = [
+                'Measure ID', 'Measure Name', 'Group', 'Your Result', 'National Mean',
+                'Std Dev', 'Z-Score', 'Weight', 'Performance'
+            ];
+            const measureRows = measures.map(m => {
+                let performance = 'N/A';
+                if (m.zScore !== 'N/A') {
+                    const z = safeNumber(m.zScore);
+                    performance = z > 0.5 ? 'Above' : z < -0.5 ? 'Below' : 'Average';
+                }
+                return [
+                    m.id,
+                    m.name,
+                    m.group,
+                    m.result === 'N/A' ? 'N/A' : safeNumber(m.result),
+                    safeNumber(m.nationalMean),
+                    safeNumber(m.stdDev),
+                    m.zScore === 'N/A' ? 'N/A' : safeNumber(m.zScore),
+                    m.weight === 'N/A' ? 'N/A' : safeNumber(m.weight),
+                    performance
+                ];
+            });
+            const ws3 = XLSX.utils.aoa_to_sheet([measureHeaders, ...measureRows]);
+            ws3['!cols'] = [
+                { wch: 30 }, { wch: 45 }, { wch: 22 }, { wch: 12 }, { wch: 15 },
+                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws3, 'All Measures');
+
+            // --- SHEET 4: Improvement Roadmap ---
+            const validMeasures = measures.filter(m => m.result !== 'N/A' && m.zScore !== 'N/A');
+            const sortedByZ = [...validMeasures].sort((a, b) => safeNumber(a.zScore) - safeNumber(b.zScore));
+            const worst5 = sortedByZ.slice(0, 5);
+            const best5 = sortedByZ.slice(-5).reverse();
+
+            const starCount = parseInt(starRating.match(/\d+/)?.[0]) || 3;
+            const peerData = PEER_GROUP_THRESHOLDS[peerGroup] || PEER_GROUP_THRESHOLDS['5 Measure Groups'];
+            let pointsNeeded = 'N/A (already 5 stars)';
+            if (starCount < 5) {
+                const nextThreshold = peerData.ranges[starCount].min;
+                pointsNeeded = formatNumber(Math.abs(nextThreshold - summaryScore));
+            }
+
+            const roadmapData = [
+                ['Improvement Roadmap'],
+                [],
+                ['Current Star Rating', starRating],
+                ['Points Needed for Next Star', pointsNeeded],
+                [],
+                ['TOP 5 IMPROVEMENT OPPORTUNITIES (Lowest Z-Scores)'],
+                ['Measure ID', 'Measure Name', 'Group', 'Z-Score', 'Your Result', 'National Mean'],
+                ...worst5.map(m => [m.id, m.name, m.group, safeNumber(m.zScore), safeNumber(m.result), safeNumber(m.nationalMean)]),
+                [],
+                ['TOP 5 STRENGTHS (Highest Z-Scores)'],
+                ['Measure ID', 'Measure Name', 'Group', 'Z-Score', 'Your Result', 'National Mean'],
+                ...best5.map(m => [m.id, m.name, m.group, safeNumber(m.zScore), safeNumber(m.result), safeNumber(m.nationalMean)])
+            ];
+            const ws4 = XLSX.utils.aoa_to_sheet(roadmapData);
+            ws4['!cols'] = [
+                { wch: 30 }, { wch: 45 }, { wch: 22 }, { wch: 10 }, { wch: 12 }, { wch: 15 }
+            ];
+            ws4['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+                { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } },
+                { s: { r: 5 + 1 + worst5.length + 1, c: 0 }, e: { r: 5 + 1 + worst5.length + 1, c: 5 } }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws4, 'Improvement Roadmap');
+
+            // Generate and download
+            const filename = 'Star_Rating_Analysis_' + providerId + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+            XLSX.writeFile(wb, filename);
+        }
+
+        function exportToPDF() {
+            if (typeof window.jspdf === 'undefined') {
+                alert('PDF export library failed to load. Please check your internet connection and refresh.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+            const providerId = hospitalData['Provider_ID'] || 'Unknown';
+            const starRating = hospitalData['Star_Rating_Results-HOSP_RESULT-Star_Score'] || 'N/A';
+            const starCount = parseInt(starRating.match(/\d+/)?.[0]) || 3;
+            const summaryScore = safeNumber(hospitalData['Star_Rating_Results-HOSP_RESULT-summary_score']);
+            const peerGroup = hospitalData['Star_Rating_Results-HOSP_RESULT-peer_group'] || '5 Measure Groups';
+
+            const pageWidth = 210;
+            const pageMargin = 20;
+            const contentWidth = pageWidth - 2 * pageMargin;
+            let y = pageMargin;
+
+            // --- Helper: check page overflow ---
+            function checkPageBreak(neededHeight) {
+                if (y + neededHeight > 277) {
+                    doc.addPage();
+                    y = pageMargin;
+                }
+            }
+
+            // --- Helper: draw horizontal line ---
+            function drawLine() {
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.3);
+                doc.line(pageMargin, y, pageWidth - pageMargin, y);
+                y += 4;
+            }
+
+            // --- Helper: draw a table ---
+            function drawTable(headers, rows, colWidths) {
+                const rowHeight = 7;
+                const fontSize = 8;
+
+                checkPageBreak(rowHeight * (rows.length + 2));
+
+                // Header row
+                doc.setFillColor(0, 83, 159);
+                doc.rect(pageMargin, y, contentWidth, rowHeight, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(fontSize);
+                doc.setFont('helvetica', 'bold');
+
+                let xPos = pageMargin + 2;
+                headers.forEach((header, i) => {
+                    doc.text(header, xPos, y + 5);
+                    xPos += colWidths[i];
+                });
+                y += rowHeight;
+
+                // Data rows
+                doc.setTextColor(52, 58, 64);
+                doc.setFont('helvetica', 'normal');
+
+                rows.forEach((row, rowIndex) => {
+                    checkPageBreak(rowHeight);
+                    if (rowIndex % 2 === 0) {
+                        doc.setFillColor(248, 249, 250);
+                        doc.rect(pageMargin, y, contentWidth, rowHeight, 'F');
+                    }
+                    xPos = pageMargin + 2;
+                    row.forEach((cell, i) => {
+                        const maxChars = Math.floor(colWidths[i] / 1.8);
+                        const cellText = String(cell).substring(0, maxChars);
+                        doc.text(cellText, xPos, y + 5);
+                        xPos += colWidths[i];
+                    });
+                    y += rowHeight;
+                });
+                y += 4;
+            }
+
+            // ====== HEADER BAR ======
+            doc.setFillColor(0, 83, 159);
+            doc.rect(0, 0, pageWidth, 36, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('CMS Hospital Star Rating', pageMargin, 15);
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Executive Summary Report', pageMargin, 24);
+            doc.setFontSize(9);
+            doc.text('April 2026 (Methodology v5.0)  |  Generated: ' + new Date().toLocaleDateString(), pageMargin, 31);
+
+            y = 46;
+
+            // ====== HOSPITAL INFO ======
+            doc.setTextColor(52, 58, 64);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Provider ID:', pageMargin, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(providerId, pageMargin + 28, y);
+            y += 8;
+
+            // Star rating
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 83, 159);
+            const filledStars = '*'.repeat(starCount);
+            const emptyStars = '-'.repeat(5 - starCount);
+            doc.text(filledStars + emptyStars + '   ' + starCount + ' out of 5 Stars', pageMargin, y);
+            y += 9;
+
+            // Summary score and peer group
+            doc.setFontSize(10);
+            doc.setTextColor(52, 58, 64);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Summary Score:', pageMargin, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(formatNumber(summaryScore), pageMargin + 34, y);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Peer Group:', pageMargin + 65, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(peerGroup, pageMargin + 92, y);
+            y += 10;
+
+            drawLine();
+
+            // ====== MEASURE GROUP SCORES ======
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 83, 159);
+            doc.text('Measure Group Scores', pageMargin, y);
+            y += 8;
+
+            const groupHeaders = ['Group', 'Used', 'Score', 'Nat. Mean', 'Weight', 'Wtd Score', 'Quartile'];
+            const groupColWidths = [38, 16, 20, 22, 18, 22, 34];
+            const groupRows = Object.values(measureGroups).map(group => {
+                const quartile = getQuartileInfo(group.name, group.score);
+                return [
+                    group.name,
+                    group.measures + '/' + group.potential,
+                    formatNumber(group.stdScore),
+                    formatNumber(group.nationalMean),
+                    (group.weight * 100).toFixed(0) + '%',
+                    formatNumber(group.stdScore * group.weight),
+                    quartile.label
+                ];
+            });
+            drawTable(groupHeaders, groupRows, groupColWidths);
+
+            drawLine();
+
+            // ====== TOP 5 IMPROVEMENT OPPORTUNITIES ======
+            checkPageBreak(65);
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 83, 159);
+            doc.text('Top 5 Improvement Opportunities', pageMargin, y);
+            y += 8;
+
+            const validMeasures = measures.filter(m => m.result !== 'N/A' && m.zScore !== 'N/A');
+            const sortedByZ = [...validMeasures].sort((a, b) => safeNumber(a.zScore) - safeNumber(b.zScore));
+            const worst5 = sortedByZ.slice(0, 5);
+            const best5 = sortedByZ.slice(-5).reverse();
+
+            const detailHeaders = ['Measure', 'Group', 'Z-Score', 'Result'];
+            const detailColWidths = [72, 42, 28, 28];
+            const oppRows = worst5.map(m => [
+                m.name,
+                m.group,
+                formatNumber(m.zScore),
+                formatNumber(m.result)
+            ]);
+            drawTable(detailHeaders, oppRows, detailColWidths);
+
+            drawLine();
+
+            // ====== TOP 5 STRENGTHS ======
+            checkPageBreak(65);
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 83, 159);
+            doc.text('Top 5 Strengths', pageMargin, y);
+            y += 8;
+
+            const strengthRows = best5.map(m => [
+                m.name,
+                m.group,
+                formatNumber(m.zScore),
+                formatNumber(m.result)
+            ]);
+            drawTable(detailHeaders, strengthRows, detailColWidths);
+
+            drawLine();
+
+            // ====== PATH TO NEXT STAR ======
+            checkPageBreak(40);
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 83, 159);
+            doc.text('Path to Next Star Level', pageMargin, y);
+            y += 9;
+
+            doc.setFontSize(10);
+            doc.setTextColor(52, 58, 64);
+
+            const peerData = PEER_GROUP_THRESHOLDS[peerGroup] || PEER_GROUP_THRESHOLDS['5 Measure Groups'];
+            if (starCount < 5) {
+                const nextThreshold = peerData.ranges[starCount].min;
+                const distance = Math.abs(nextThreshold - summaryScore);
+
+                doc.setFont('helvetica', 'normal');
+                doc.text('Current Score:  ' + formatNumber(summaryScore), pageMargin, y);
+                y += 6;
+                doc.text('Target for ' + (starCount + 1) + ' Stars:  ' + formatNumber(nextThreshold), pageMargin, y);
+                y += 6;
+                doc.setFont('helvetica', 'bold');
+                doc.text('Points Needed:  ' + formatNumber(distance), pageMargin, y);
+                y += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(108, 117, 125);
+                doc.text('Focus on improving your worst-performing measures to close this gap.', pageMargin, y);
+            } else {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Maximum 5-star rating achieved. Focus on maintaining this excellent performance.', pageMargin, y);
+            }
+
+            // ====== FOOTER ON ALL PAGES ======
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(173, 181, 189);
+                doc.text(
+                    'CMS Hospital Star Rating Analyzer  |  Medisolv  |  Page ' + i + ' of ' + pageCount,
+                    pageWidth / 2, 290,
+                    { align: 'center' }
+                );
+            }
+
+            // Save
+            const filename = 'Star_Rating_Summary_' + providerId + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
+            doc.save(filename);
         }
 
     </script>
